@@ -1,0 +1,42 @@
+// const express = require("express");
+
+// const { getBingRanking, getProjects, exportExcel, editProject, deleteProject } = require("../controllers/BingRankingController");
+// const router = express.Router();
+
+// router.get("/daily-report", getBingRanking);
+// router.get("/get-projects", getProjects);
+// router.get("/export-excel", exportExcel);
+// router.put("/edit-project/:id", editProject);
+// router.delete("/delete-project/:id", deleteProject);
+
+// module.exports = router;
+
+
+
+
+const express = require("express");
+const {
+  getBingRanking,
+  getProjects,
+  exportExcel,
+  editProject,
+  deleteProject,
+} = require("../controllers/BingRankingController");
+
+const router = express.Router();
+
+// ⚡ Disable caching for all Bing routes
+router.use((req, res, next) => {
+  res.setHeader("Cache-Control", "no-store"); // prevent 304 Not Modified
+  next();
+});
+
+// Routes
+router.get("/daily-report", getBingRanking);
+router.get("/get-projects", getProjects);
+router.get("/export-excel", exportExcel);
+router.put("/edit-project/:id", editProject);
+router.delete("/delete-project/:id", deleteProject);
+
+module.exports = router;
+
