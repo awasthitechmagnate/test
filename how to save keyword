@@ -1,0 +1,90 @@
+To handle 100,000 keywords per user across 1 lakh users, you cannot use a standard "request-response" model. Your server will crash due to CPU exhaustion (parsing Excel) or RAM overflow.
+
+The "Right Way" is an Asynchronous Event-Driven Architecture. Here is the detailed blueprint:
+
+1. The Architecture (Infrastructure Level)
+You need to separate the API Server from the Data Processor.
+
+API Gateway (Express): Receives the file, saves it to a temporary location (S3 or Disk), and immediately gives the user a "Job ID."
+
+Message Queue (Redis + BullMQ): Acts as a waiting room. It stores the "Job" (e.g., "Process file X for Project Y").
+
+Worker Nodes (Background Processors): These are separate Node.js processes that pull jobs from the queue, parse the file, and write to the DB.
+
+Database (MongoDB Sharding): You must partition your data across multiple servers so that 10 billion rows don't slow down.
+
+2. High-Scale Backend Strategy (Step-by-Step)
+A. Multer Disk Storage (Save RAM)
+Never use MemoryStorage for large files. It puts the whole file into RAM. DiskStorage streams the file directly to your hard drive.
+
+JavaScript
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/'),
+  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
+});
+const upload = multer({ storage });
+B. The Job Producer (The API)
+Instead of processing the file inside the route, you send it to a Queue. This keeps the API lightning-fast.
+
+JavaScript
+
+const keywordQueue = new Queue('keyword-upload'); // Using BullMQ
+
+app.post("/api/projects/upload", upload.single("file"), async (req, res) => {
+  const project = await Project.create(JSON.parse(req.body.projectData));
+  
+  // Add task to Queue and return 202 (Accepted)
+  await keywordQueue.add('process-excel', {
+    filePath: req.file.path,
+    projectId: project._id
+  });
+
+  res.status(202).json({ 
+    message: "File is being processed. Check your report in a few minutes.",
+    jobId: project._id 
+  });
+});
+C. The Worker (The "Heavy Lifter")
+The worker runs on a separate CPU core. It uses Streaming to read the Excel file. This ensures that even if the file has 1 million rows, the worker only uses ~50MB of RAM.
+
+JavaScript
+
+// Inside worker.js
+worker.on('completed', async (job) => {
+  const { filePath, projectId } = job.data;
+  const workbook = XLSX.readFile(filePath, { type: 'string' }); // Read from disk
+  // ... split into 5000-row chunks and use bulkWrite ...
+  
+  // Delete file after processing to save disk space
+  fs.unlinkSync(filePath); 
+});
+3. Database Optimization (Write Speed)
+For 1 lakh users, you cannot use .save() or insertMany with defaults. You must use bulkWrite. It is much faster because it sends multiple commands to MongoDB in a single network packet.
+
+JavaScript
+
+const bulkOps = chunk.map(doc => ({
+  insertOne: { document: doc }
+}));
+
+await Keyword.bulkWrite(bulkOps, { ordered: false });
+4. Handling 1 Lakh Concurrent Users
+If 1 lakh users upload simultaneously, your database will experience "Write Contention."
+
+Rate Limiting: Use express-rate-limit to prevent a single user from spamming the upload button.
+
+MongoDB Sharding: Distribute your Keywords collection based on projectId. This allows different projects to be stored on different physical servers.
+
+Horizontal Scaling: Run your Worker script inside a Docker Container. If the Queue gets too long (e.g., 50,000 files waiting), use Kubernetes to automatically spin up 10 more Worker containers to clear the backlog.
+
+5. Summary Checklist for High Scale
+Move File Storage to S3: Don't keep files on the web server; move them to AWS S3 or Google Cloud Storage.
+
+Background Jobs: Use BullMQ or RabbitMQ. Never process files inside the Express request.
+
+Progress Tracking: Since the user isn't waiting for the response, use Socket.io or Web-Push Notifications to tell them "Your 100k keywords are ready!"
+
+Database Partitioning: Use MongoDB Sharding to split data across disks.
+
+Which part would you like to focus on first? I can provide the code for the BullMQ Background Worker if you want to set up the professional queue system.
