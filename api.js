@@ -5,13 +5,15 @@ export const API_BASE_URL = "http://localhost:5000";
 // const API_BASE_URL = "https://rank-tracker.techmagnate.com";
 
 // export const API_BASE_URL = "http://13.233.109.21";
-// --------------------------------------------
-// export const API_BASE_URL = "http://rank.techmagnate.in";
 
 // very new api
 // export const API_BASE_URL = "http://13.202.201.123";
 // export const API_BASE_URL = "http://rank.techmagnate.in";
-// -----------------------------------
+
+// New domain
+// export const API_BASE_URL = "http://37.27.59.115";
+// export const API_BASE_URL = "https://prism.techmagnate.com";
+
 const getToken = () => {
   return localStorage.getItem("token");
 };
@@ -22,6 +24,22 @@ const getInternalToken = () => {
 
 export const createTask = async (taskData) => {
   return await axios.post(`${API_BASE_URL}/api/tasks/create`, taskData);
+};
+
+export const superAdminPing = () => {
+  const token = getToken();
+  return axios.get(`${API_BASE_URL}/api/super-admin/ping`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
+
+export const superAdminQueueInstantSearchVolume = ({ projectId, projectIds } = {}) => {
+  const token = getToken();
+  return axios.post(
+    `${API_BASE_URL}/api/super-admin/search-volume/instant`,
+    { projectId, projectIds },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
 };
 
 // project routes
@@ -49,9 +67,37 @@ export const getProjects = (filter) => {
   );
 };
 
+export const getProjectsPaged = ({ filter = {}, page = 1, limit = 100 } = {}) => {
+  const token = getToken();
+
+  const queryParams = new URLSearchParams();
+  queryParams.append("page", String(page));
+  queryParams.append("limit", String(limit));
+  if (filter && Object.keys(filter).length > 0) {
+    queryParams.append("filters", JSON.stringify(filter));
+  }
+
+  return axios.get(`${API_BASE_URL}/api/projects/get?${queryParams.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
+
 export const blockProject = async (projectId) => {
   return await axios.post(
     `${API_BASE_URL}/api/projects/block-project/${projectId}`
+  );
+};
+
+export const runAllProjectSearchVolume = async () => {
+  const token = getToken();
+  return axios.post(
+    `${API_BASE_URL}/api/projects/run-all-search-volume`,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
   );
 };
 
@@ -91,8 +137,12 @@ export const blockLocalProject = async (projectId) => {
 
 // upload keywords
 
-export const UploadKeywords = (data) =>
-  axios.post(`${API_BASE_URL}/api/upload/upload-file`, data);
+export const UploadKeywords = (data) => {
+  return axios.post(`${API_BASE_URL}/api/upload/upload-file`, data);
+}
+
+export const runKeywordsNow = (data) =>
+  axios.post(`${API_BASE_URL}/api/upload/run-now`, data);
 
 export const UploadLocalKeywords = (data) =>
   axios.post(`${API_BASE_URL}/api/local-upload/upload-file`, data);
@@ -159,7 +209,197 @@ export const getUnifiedRankingDashboard = async (
   );
 };
 
+//Serp Summary Dashboard
+// Accepts an object: { page, limit, filter } and optional axios config as 2nd arg
+export const getSerpSummaryDashboard = async (
+  { page, limit, filter = {} } = {},
+  axiosConfig = {}
+) => {
+  let filterObj = {};
+  if (!filter) filterObj = {};
+  else if (typeof filter === "string") {
+    try { filterObj = JSON.parse(filter); } catch (e) { filterObj = {}; }
+  } else {
+    filterObj = filter;
+  }
 
+  const filterStr =
+    filterObj && Object.keys(filterObj).length
+      ? encodeURIComponent(JSON.stringify(filterObj))
+      : "";
+
+  const params = [];
+  if (page != null && page !== "") {
+    params.push(`page=${encodeURIComponent(page)}`);
+  }
+  if (limit != null && limit !== "") {
+    params.push(`limit=${encodeURIComponent(limit)}`);
+  }
+  if (filterStr) {
+    params.push(`filter=${filterStr}`);
+  }
+
+  const qs = params.length ? `?${params.join("&")}` : "";
+
+  return axios.get(
+    `${API_BASE_URL}/api/tasks/get-serp-summary-dashboard${qs}`,
+    axiosConfig
+  );
+};
+
+export const getSerpCategorySummaryDashboard = async (
+  { page, limit, filter = {} } = {},
+  axiosConfig = {}
+) => {
+  let filterObj = {};
+  if (!filter) filterObj = {};
+  else if (typeof filter === "string") {
+    try { filterObj = JSON.parse(filter); } catch (e) { filterObj = {}; }
+  } else {
+    filterObj = filter;
+  }
+
+  const filterStr =
+    filterObj && Object.keys(filterObj).length
+      ? encodeURIComponent(JSON.stringify(filterObj))
+      : "";
+
+  const params = [];
+  if (page != null && page !== "") {
+    params.push(`page=${encodeURIComponent(page)}`);
+  }
+  if (limit != null && limit !== "") {
+    params.push(`limit=${encodeURIComponent(limit)}`);
+  }
+  if (filterStr) {
+    params.push(`filter=${filterStr}`);
+  }
+
+  const qs = params.length ? `?${params.join("&")}` : "";
+
+  return axios.get(
+    `${API_BASE_URL}/api/tasks/get-serp-category-summary-dashboard${qs}`,
+    axiosConfig
+  );
+};
+
+export const getSerpCategorySubCategorySummaryDashboard = async (
+  { page, limit, filter = {} } = {},
+  axiosConfig = {}
+) => {
+  let filterObj = {};
+  if (!filter) filterObj = {};
+  else if (typeof filter === "string") {
+    try { filterObj = JSON.parse(filter); } catch (e) { filterObj = {}; }
+  } else {
+    filterObj = filter;
+  }
+
+  const filterStr =
+    filterObj && Object.keys(filterObj).length
+      ? encodeURIComponent(JSON.stringify(filterObj))
+      : "";
+
+  const params = [];
+  if (page != null && page !== "") {
+    params.push(`page=${encodeURIComponent(page)}`);
+  }
+  if (limit != null && limit !== "") {
+    params.push(`limit=${encodeURIComponent(limit)}`);
+  }
+  if (filterStr) {
+    params.push(`filter=${filterStr}`);
+  }
+
+  const qs = params.length ? `?${params.join("&")}` : "";
+
+  return axios.get(
+    `${API_BASE_URL}/api/tasks/get-serp-category-subcategory-summary-dashboard${qs}`,
+    axiosConfig
+  );
+};
+
+export const getSerpCategoryOnlySummaryDashboard = async (
+  { page, limit, filter = {} } = {},
+  axiosConfig = {}
+) => {
+  let filterObj = {};
+  if (!filter) filterObj = {};
+  else if (typeof filter === "string") {
+    try { filterObj = JSON.parse(filter); } catch (e) { filterObj = {}; }
+  } else {
+    filterObj = filter;
+  }
+
+  const filterStr =
+    filterObj && Object.keys(filterObj).length
+      ? encodeURIComponent(JSON.stringify(filterObj))
+      : "";
+
+  const params = [];
+  if (page != null && page !== "") {
+    params.push(`page=${encodeURIComponent(page)}`);
+  }
+  if (limit != null && limit !== "") {
+    params.push(`limit=${encodeURIComponent(limit)}`);
+  }
+  if (filterStr) {
+    params.push(`filter=${filterStr}`);
+  }
+
+  const qs = params.length ? `?${params.join("&")}` : "";
+
+  return axios.get(
+    `${API_BASE_URL}/api/tasks/get-serp-category-only-summary-dashboard${qs}`,
+    axiosConfig
+  );
+};
+
+
+
+// unified Testing
+
+export const getUnifiedTestingDashboard = async (
+  { tab, page, limit, filter = {} } = {},
+  axiosConfig = {}
+) => {
+  let filterObj = {};
+  if (!filter) filterObj = {};
+  else if (typeof filter === "string") {
+    try { filterObj = JSON.parse(filter); } catch (e) { filterObj = {}; }
+  } else {
+    filterObj = filter;
+  }
+
+  const filterStr =
+    filterObj && Object.keys(filterObj).length
+      ? encodeURIComponent(JSON.stringify(filterObj))
+      : "";
+
+  const params = [];
+
+  // Add tab parameter - THIS WAS MISSING!
+  if (tab != null && tab !== "") {
+    params.push(`tab=${encodeURIComponent(tab)}`);
+  }
+
+  if (page != null && page !== "") {
+    params.push(`page=${encodeURIComponent(page)}`);
+  }
+  if (limit != null && limit !== "") {
+    params.push(`limit=${encodeURIComponent(limit)}`);
+  }
+  if (filterStr) {
+    params.push(`filter=${filterStr}`);
+  }
+
+  const qs = params.length ? `?${params.join("&")}` : "";
+
+  return axios.get(
+    `${API_BASE_URL}/api/tasks/get-unified-testing-dashboard${qs}`,
+    axiosConfig
+  );
+};
 
 //get local ranking
 export const getLocalRanking = async (page = 1, limit = 10, filterQuery) => {
@@ -300,11 +540,50 @@ export const getImages = async (filterQuery) => {
 };
 
 // Local Pack
-
 export const getLocalPack = async (filterQuery) => {
   const filter = filterQuery ? JSON.stringify(filterQuery) : "";
   return axios.get(
     `${API_BASE_URL}/api/tasks/get-local-pack?&filter=${filter}`
+  );
+};
+
+// Top Stories
+export const getTopStories = async (filterQuery) => {
+  const filter = filterQuery ? JSON.stringify(filterQuery) : "";
+  return axios.get(
+    `${API_BASE_URL}/api/tasks/get-top-stories?&filter=${filter}`
+  );
+};
+
+// Short Videos
+export const getShortVideos = async (filterQuery) => {
+  const filter = filterQuery ? JSON.stringify(filterQuery) : "";
+  return axios.get(
+    `${API_BASE_URL}/api/tasks/get-short-videos?&filter=${filter}`
+  );
+};
+
+// Discussions and forums
+export const getDiscussionsAndForums = async (filterQuery) => {
+  const filter = filterQuery ? JSON.stringify(filterQuery) : "";
+  return axios.get(
+    `${API_BASE_URL}/api/tasks/get-discussions-and-forums?&filter=${filter}`
+  );
+};
+
+// Video
+export const getVideos = async (filterQuery) => {
+  const filter = filterQuery ? JSON.stringify(filterQuery) : "";
+  return axios.get(
+    `${API_BASE_URL}/api/tasks/get-videos?&filter=${filter}`
+  );
+};
+
+// Shopping
+export const getShopping = async (filterQuery) => {
+  const filter = filterQuery ? JSON.stringify(filterQuery) : "";
+  return axios.get(
+    `${API_BASE_URL}/api/tasks/get-shopping?&filter=${filter}`
   );
 };
 
@@ -334,7 +613,7 @@ export const userLogin = (data) =>
 
 export const changePassword = (data, pathType) => {
   let query = { ...data, pathType };
-  axios.post(`${API_BASE_URL}/api/auth/change-password`, query);
+  return axios.post(`${API_BASE_URL}/api/auth/change-password`, query);
 };
 
 export const getProfile = () => {
@@ -350,7 +629,7 @@ export const getProfile = () => {
 //     `${API_BASE_URL}/api/utils/read_excel?project_id=${project_id}&filter=${filter}`
 //   );
 // };
-// ---------------this code for keyword Ranking perfect code-------------------------------------------------------------------------
+
 export const getExcel = async (project_id, params = {}) => {
   const query = new URLSearchParams({
     project_id,
@@ -415,8 +694,47 @@ export const exportRawKeywordRankingCsv = async (filter) => {
   );
 };
 
-// Dashboard api
+export const exportRawYoutubeRankingCsv = async (project) => {
+  return axios.get(
+    `${API_BASE_URL}/api/export/youtube-ranking-raw-csv`,
+    {
+      params: { project },
+      responseType: "blob",
+    }
+  );
+};
 
+export const exportYoutubeRanking = (params) => {
+  return axios.get(
+    `${API_BASE_URL}/api/youtube/export-youtube-rankings`,
+    {
+      params,
+      responseType: "blob", // 🔥 REQUIRED
+    }
+  );
+};
+
+export const exportAppRanking = (params) => {
+  return axios.get(
+    `${API_BASE_URL}/api/app-rank/export-app-rankings`,
+    {
+      params,
+      responseType: "blob", // 🔥 REQUIRED
+    }
+  );
+};
+
+export const exportRawAppRankingCsv = async (params) => {
+  return axios.get(
+    `${API_BASE_URL}/api/export/app-ranking-raw-csv`,
+    {
+      params: params,
+      responseType: "blob",
+    }
+  );
+};
+
+// Dashboard api
 export const dashboardCount = async (project_id) => {
   return axios.get(
     `${API_BASE_URL}/api/dashboard/get-count?project_id=${project_id}`
@@ -721,6 +1039,27 @@ export const getLLMPromptsWithBrand = async ({ filters = {}, page = 1, limit = 1
   );
 };
 
+export const compareLLMBrandMentionsByDates = async ({ filters = {}, page = 1, limit = 50 }) => {
+  const filtersString = encodeURIComponent(JSON.stringify(filters));
+  return axios.get(
+    `${API_BASE_URL}/api/llm/compareBrandMentionsByDates?filters=${filtersString}&page=${page}&limit=${limit}`
+  );
+};
+
+export const compareLLMMyPagesCitedByDates = async ({ filters = {}, page = 1, limit = 50 }) => {
+  const filtersString = encodeURIComponent(JSON.stringify(filters));
+  return axios.get(
+    `${API_BASE_URL}/api/llm/compareMyPagesCitedByDates?filters=${filtersString}&page=${page}&limit=${limit}`
+  );
+};
+
+export const compareLLMPagesMentioningMeByDates = async ({ filters = {}, page = 1, limit = 50 }) => {
+  const filtersString = encodeURIComponent(JSON.stringify(filters));
+  return axios.get(
+    `${API_BASE_URL}/api/llm/comparePagesMentioningMeByDates?filters=${filtersString}&page=${page}&limit=${limit}`
+  );
+};
+
 export const getLLMThirdPartyPages = async ({ filters = {}, page = 1, limit = 10 }) => {
   const filtersString = encodeURIComponent(JSON.stringify(filters));
   return axios.get(
@@ -771,46 +1110,6 @@ export const getLLMPrompts = async ({ filters = {}, page = 1, limit = 10 }) => {
 
 // Bing Mode
 
-// export const getBingProjects = async (filter) => {
-//   let url = `${API_BASE_URL}/api/bing/get-projects`;
-//   if (filter) {
-//     url += `?filter=${encodeURIComponent(JSON.stringify(filter))}`;
-//   }
-//   return axios.get(url);
-// };
-
-
-// export const getDailyRankingBingReport = async (
-//   page = 1,
-//   limit = 10,
-//   filterQuery
-// ) => {
-//   const filter = filterQuery ? JSON.stringify(filterQuery) : "";
-//   return axios.get(
-//     `${API_BASE_URL}/api/bing/daily-report?page=${page}&limit=${limit}&filter=${filter}`
-//   );
-// };
-
-// export const exportBingRankings = async (filter) => {
-//   filter = JSON.stringify(filter);
-//   return axios.get(
-//     `${API_BASE_URL}/api/bing/export-excel?filter=${filter}`,
-//     { responseType: "arraybuffer" },
-//   );
-// };
-
-// export const editBingProjects = async (id, payload) => {
-//   const url = `${API_BASE_URL}/api/bing/edit-project/${id}`;
-//   return axios.put(url, payload);
-// };
-
-// export const deleteBingProjects = async (id) => {
-//   const url = `${API_BASE_URL}/api/bing/delete-project/${id}`;
-//   return axios.delete(url);
-// };
-
-
-
 export const getBingProjects = async (filter) => {
   let url = `${API_BASE_URL}/api/bing/get-projects`;
   if (filter) {
@@ -819,42 +1118,77 @@ export const getBingProjects = async (filter) => {
   return axios.get(url);
 };
 
+
 export const getDailyRankingBingReport = async (
   page = 1,
   limit = 10,
   filterQuery
 ) => {
-  let url = `${API_BASE_URL}/api/bing/daily-report?page=${page}&limit=${limit}`;
+  const filter = filterQuery ? JSON.stringify(filterQuery) : "";
+  return axios.get(
+    `${API_BASE_URL}/api/bing/daily-report?page=${page}&limit=${limit}&filter=${filter}`
+  );
+};
 
-  if (filterQuery) {
-    url += `&filter=${encodeURIComponent(JSON.stringify(filterQuery))}`;
-  }
+export const getDailyBingRankingReportNew = async (
+  page = 1,
+  limit = 10,
+  filterQuery
+) => {
+  const filter = filterQuery ? JSON.stringify(filterQuery) : "";
+  return axios.get(
+    `${API_BASE_URL}/api/bing/get-bing-rankings?page=${page}&limit=${limit}&filter=${filter}`
+  );
+};
 
-  return axios.get(url);
+export const getDailyBingRankingCardsNew = async ({
+  page = 1,
+  limit = 10,
+  project,
+  startDate,
+  endDate
+}) => {
+  return axios.get(
+    `${API_BASE_URL}/api/bing/get-bing-rankings-cards`,
+    {
+      params: {
+        page,
+        limit,
+        filter: JSON.stringify({
+          project,
+          startDate,
+          endDate
+        })
+      }
+    }
+  );
 };
 
 export const exportBingRankings = async (filter) => {
-  const encodedFilter = encodeURIComponent(JSON.stringify(filter));
-
+  filter = JSON.stringify(filter);
   return axios.get(
-    `${API_BASE_URL}/api/bing/export-excel?filter=${encodedFilter}`,
-    { responseType: "arraybuffer" }
+    `${API_BASE_URL}/api/bing/export-bing-rankings?filter=${filter}`,
+    { responseType: "arraybuffer" },
+  );
+};
+
+export const exportBingRankingsRaw = async (filter) => {
+  filter = JSON.stringify(filter);
+  return axios.get(
+    `${API_BASE_URL}/api/bing/export-bing-rankings-raw?filter=${filter}`,
+    { responseType: "arraybuffer" },
   );
 };
 
 export const editBingProjects = async (id, payload) => {
-  return axios.put(
-    `${API_BASE_URL}/api/bing/edit-project/${id}`,
-    payload
-  );
+  const url = `${API_BASE_URL}/api/bing/edit-project/${id}`;
+  return axios.put(url, payload);
 };
 
 export const deleteBingProjects = async (id) => {
-  return axios.delete(
-    `${API_BASE_URL}/api/bing/delete-project/${id}`
-  );
+  const url = `${API_BASE_URL}/api/bing/delete-project/${id}`;
+  return axios.delete(url);
 };
-
 // APP Rank
 
 export const getAppRankProjects = async (filterQuery, apiType) => {
@@ -876,6 +1210,49 @@ export const getDailyAppRankingReport = async (
     `${API_BASE_URL}/api/app-rank/daily-report?page=${page}&limit=${limit}&filter=${filter}`
   );
 };
+
+export const getDailyAppRankingReportNew = async (
+  apiType,
+  page = 1,
+  limit = 10,
+  filterQuery
+) => {
+  const filter = filterQuery ? JSON.stringify(filterQuery) : "";
+
+  return axios.get(
+    `${API_BASE_URL}/api/app-rank/get-daily-app-rank`,
+    {
+      params: {
+        page,
+        limit,
+        filter,
+        apiType   // ✅ send this
+      }
+    }
+  );
+};
+
+export const getDailyAppRankingCardNew = async (
+  apiType,
+  page = 1,
+  limit = 10,
+  filterQuery
+) => {
+  const filter = filterQuery ? JSON.stringify(filterQuery) : "";
+
+  return axios.get(
+    `${API_BASE_URL}/api/app-rank/get-daily-app-rank-cards`,
+    {
+      params: {
+        page,
+        limit,
+        filter,
+        apiType   // ✅ send this
+      }
+    }
+  );
+};
+
 
 export const exportLLMRankings = async (filter, slug) => {
   filter = JSON.stringify(filter);
@@ -920,20 +1297,22 @@ export const getDailyYoutubeRankingReport = async (
   );
 };
 
-
-
-export const getYoutubeExcel = async (project_id, params = {}) => {
-  const query = new URLSearchParams({
-    project_id,
-    ...params,
-  }).toString();
-
+export const getDailyYoutubeRankingCards = async ({
+  project,
+  startDate,
+  endDate
+}) => {
   return axios.get(
-    `${API_BASE_URL}/api/utils/read_excel?project_id=${project_id}&query=${query}`
+    `${API_BASE_URL}/api/youtube/get-youtube-rankings-cards`,
+    {
+      params: {
+        project,
+        startDate,
+        endDate
+      }
+    }
   );
 };
-
-
 
 
 export const editYoutubeProjects = async (id, payload) => {
@@ -1021,4 +1400,163 @@ export const getInternalProfile = (token) => {
   return axios.get(`${API_BASE_URL}/api/auth/get-internal-profile`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+};
+
+
+// Summary Dashboard APIs
+
+export const getKeywordSummary = (params) => {
+  return axios.get(
+    `${API_BASE_URL}/api/summary/get-keyword-summary`,
+    { params }
+  );
+};
+
+export const getTestMetrics = (params) => {
+  return axios.get(
+    `${API_BASE_URL}/api/summary/get-test-metrics`,
+    { params }
+  );
+};
+
+export const getSerpFeatureSummary = (params) => {
+  return axios.get(
+    `${API_BASE_URL}/api/summary/get-serp-features-summary`,
+    { params }
+  );
+};
+
+export const getVisibilityTrend = (params) => {
+  return axios.get(
+    `${API_BASE_URL}/api/summary/get-visibility-trend`,
+    { params }
+  );
+};
+
+
+// keyword overview APIs
+
+export const getKeywordRankingTable = (params, page, limit, searchTerm = "", bucket = "") => {
+  return axios.get(
+    `${API_BASE_URL}/api/summary/get-keyword-ranking-table?page=${page}&limit=${limit}&searchTerm=${searchTerm}&bucket=${bucket}`,
+    { params }
+  );
+};
+
+export const getSerpFeaturesByKeywords = ({ filter, keywords, endDate }) => {
+  const params = new URLSearchParams();
+
+  // Project
+  if (filter.project) params.append("project", filter.project);
+
+  // Keywords — array → comma-separated string
+  if (keywords?.length) params.append("keywords", keywords.join(","));
+
+  // Date
+  if (endDate) params.append("endDate", endDate);
+
+  // Optional filters (pass through so backend has context if needed)
+  if (filter.brand) params.append("brand", filter.brand);
+  if (filter.category) params.append("category", filter.category);
+  if (filter.subCategory) params.append("subCategory", filter.subCategory);
+
+  return axios.get(`${API_BASE_URL}/api/summary/get-serp-features-by-keywords?${params.toString()}`);
+};
+
+// keyword summary sov dashboard
+export const getSovDashboard = (params, competitor, page, limit, searchTerm = "", bucket = "") => {
+  return axios.get(
+    `${API_BASE_URL}/api/summary/get-sov-dashboard?competitor=${competitor}&page=${page}&limit=${limit}&searchTerm=${searchTerm}&bucket=${bucket}`,
+    { params }
+  );
+};
+
+// export keyword table data in excel
+export const exportKeywordRankingTable = (params) => {
+  return axios.get(
+    `${API_BASE_URL}/api/summary/export-keyword-ranking-table`,
+    {
+      params,
+      responseType: "blob", // 🔥 REQUIRED
+    }
+  );
+};
+
+// export raw keyword table data in excel
+export const exportRawKeywordRankingTable = (params) => {
+  return axios.get(
+    `${API_BASE_URL}/api/summary/export-raw-keyword-ranking-table`,
+    {
+      params,
+      responseType: "blob", // 🔥 REQUIRED
+    }
+  );
+};
+
+// Serp unifed for new ui
+export const getSERPUnified = (params, page, limit, searchTerm = "", bucket = "") => {
+  return axios.get(
+    `${API_BASE_URL}/api/summary/get-unifed-v2-rankings?page=${page}&limit=${limit}&searchTerm=${searchTerm}&bucket=${bucket}`,
+    { params }
+  );
+};
+
+export const exportSERPUnified = (params) => {
+  return axios.get(
+    `${API_BASE_URL}/api/summary/export-unifed-v2-rankings`,
+    {
+      params,
+      responseType: "blob"
+    }
+  );
+};
+
+
+// Serp Features new api
+export const getSerpFeaturesNewTable = (params, featureKey, current_page, per_page,) => {
+  return axios.get(
+    `${API_BASE_URL}/api/summary/get-serp-features-new?feature=${featureKey}&page=${current_page}&limit=${per_page}`,
+    { params }
+  );
+};
+
+export const getSerpFeaturesSov = (params, featureKey) => {
+  return axios.get(
+    `${API_BASE_URL}/api/summary/get-serp-features-sov?feature=${featureKey}`,
+    { params }
+  );
+};
+
+export const exportSerpFeaturesTableData = (params, featureKey) => {
+  return axios.get(
+    `${API_BASE_URL}/api/summary/export-serp-features-table-data`,
+    {
+      params: {
+        ...params,
+        feature: featureKey, // move feature into params
+      },
+      responseType: "blob", // 🔥 CRITICAL
+    }
+  );
+};
+
+export const exportSerpFeaturesRawTableData = (params, featureKey) => {
+  return axios.get(
+    `${API_BASE_URL}/api/summary/export-serp-features-table-raw-data`,
+    {
+      params: {
+        ...params,
+        feature: featureKey,
+      },
+      responseType: "blob",
+    }
+  );
+};
+
+/*****Serp features analytics */
+export const getSerpFeatureAnalytics = (params, page, limit, bucket = "") => {
+  return axios.get(
+    `${API_BASE_URL}/api/summary/get-serp-feature-analytics?page=${page}&limit=${limit}&bucket=${bucket}`,
+    { params }
+  );
 };
